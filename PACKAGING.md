@@ -61,6 +61,10 @@ If the `.exe` is unreliable on a user's machine, prefer the source local install
 Start-Windows.bat
 ```
 
+For non-technical Windows users, the source local install package is the recommended default. It requires Python 3.11+ once, then users start the app by double-clicking `Start-Windows.bat`. The first launch installs `uv` and dependencies for the current user.
+
+The `.exe` is still useful when users cannot install Python. It works without a separate Python install because PyInstaller bundles a Python runtime, project code, dependencies, templates, and static assets. The tradeoff is that Windows SmartScreen, antivirus software, console behavior, and dynamic dependency loading can differ from normal Python execution.
+
 ## Runtime Behavior
 
 The packaged launcher:
@@ -73,6 +77,22 @@ The packaged launcher:
 - stores API keys per user through the app settings UI
 
 API keys are not bundled into the app and should not be stored in `.env` for shared builds.
+
+Packaged desktop builds and source launchers can be reused. User data is stored outside the app or source folder:
+
+Windows:
+
+```text
+%LOCALAPPDATA%\LLM Abstract Screening\data
+```
+
+macOS:
+
+```text
+~/Library/Application Support/LLM Abstract Screening/data
+```
+
+Users can replace the downloaded `.exe`, `.app`, or source package and still keep previous projects, runs, review projects, exported files, and saved API keys. Data is lost only if the local data directory is deleted, the user switches OS accounts, or the user moves to a different computer without copying the data directory.
 
 ## PyInstaller Lessons Learned
 
@@ -93,6 +113,21 @@ uvicorn.run("backend.main:app", ...)
 The string form can fail after packaging because PyInstaller may not discover the dynamically imported `backend` package. The symptom is that double-clicking the `.app` appears to do nothing because the windowless app exits immediately.
 
 `backend/main.py` must resolve bundled resources with `sys._MEIPASS` so `templates/` and `static/` work inside PyInstaller builds.
+
+Disable Uvicorn's default logging configuration in packaged desktop mode:
+
+```python
+uvicorn.run(app, host="127.0.0.1", port=port, log_config=None)
+```
+
+Without `log_config=None`, a windowed Windows executable can fail during startup with:
+
+```text
+Unable to configure formatter 'default'
+AttributeError: 'NoneType' object has no attribute 'isatty'
+```
+
+This happens because the packaged executable may not have a normal console stream, while Uvicorn's default formatter expects one.
 
 ## Debugging a Silent macOS Launch
 

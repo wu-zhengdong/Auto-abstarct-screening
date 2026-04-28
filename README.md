@@ -60,14 +60,22 @@ http://127.0.0.1:8000/
 
 ## Recommended Windows Local Install
 
-If the packaged Windows `.exe` is blocked or shows startup errors, use the source launcher instead.
+For non-technical Windows users, the recommended distribution is:
+
+```text
+LLM_Abstract_Screening_Source_Local_Install.zip
+```
+
+This source launcher is more debuggable than the packaged `.exe` and is less likely to be blocked by Windows security tools or PyInstaller-specific runtime issues.
 
 1. Install Python 3.11 or newer from `python.org` and tick `Add python.exe to PATH`.
 2. Download `LLM_Abstract_Screening_Source_Local_Install.zip` from the GitHub release.
 3. Unzip it.
 4. Double-click `Start-Windows.bat`.
 
-The first launch installs `uv` for that Windows user, downloads dependencies, starts the local app, and opens the browser. See [LOCAL_INSTALL.md](LOCAL_INSTALL.md).
+The first launch installs `uv` for that Windows user, downloads dependencies, starts the local app, and opens the browser. After that, users keep launching the app by double-clicking `Start-Windows.bat`.
+
+Use the `.exe` mainly when users cannot install Python. The `.exe` bundles Python and dependencies, so it does not require a separate Python install, but it is more likely to hit SmartScreen, antivirus, or PyInstaller runtime differences. See [LOCAL_INSTALL.md](LOCAL_INSTALL.md).
 
 ## Build a Windows `.exe`
 
@@ -142,7 +150,7 @@ Normalization lowercases text, strips extra whitespace, and removes punctuation 
 
 ## Storage layout
 
-Projects are stored under `data/projects/<project_id>/`:
+During development, projects are stored under `data/projects/<project_id>/`:
 
 - `project.json`
 - `studies.jsonl`
@@ -154,6 +162,22 @@ Runs are stored under `data/runs/<run_id>/`:
 - `results.csv`
 - `errors.csv`
 - `results.xlsx`
+
+Packaged desktop builds and source launchers store reusable user data outside the app folder:
+
+Windows:
+
+```text
+%LOCALAPPDATA%\LLM Abstract Screening\data
+```
+
+macOS:
+
+```text
+~/Library/Application Support/LLM Abstract Screening/data
+```
+
+This means users can close and reopen the app, replace an older `.exe`, or replace an older source package without losing previous projects, screening runs, review projects, exported results, or saved API keys. Data is lost only if the user deletes that local data directory, changes OS user accounts, or moves to another computer without migrating the data directory.
 
 ## Main pages
 
