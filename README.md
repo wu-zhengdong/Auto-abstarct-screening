@@ -58,6 +58,17 @@ uv run uvicorn backend.main:app --reload
 http://127.0.0.1:8000/
 ```
 
+## Recommended Windows Local Install
+
+If the packaged Windows `.exe` is blocked or shows startup errors, use the source launcher instead.
+
+1. Install Python 3.11 or newer from `python.org` and tick `Add python.exe to PATH`.
+2. Download `LLM_Abstract_Screening_Source_Local_Install.zip` from the GitHub release.
+3. Unzip it.
+4. Double-click `Start-Windows.bat`.
+
+The first launch installs `uv` for that Windows user, downloads dependencies, starts the local app, and opens the browser. See [LOCAL_INSTALL.md](LOCAL_INSTALL.md).
+
 ## Build a Windows `.exe`
 
 Detailed packaging notes and troubleshooting are in [PACKAGING.md](PACKAGING.md).

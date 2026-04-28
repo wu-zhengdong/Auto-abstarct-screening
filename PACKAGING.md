@@ -55,6 +55,12 @@ dist\LLM_Abstract_Screening.exe
 
 Build the Windows executable on Windows. PyInstaller should not be treated as a reliable macOS-to-Windows cross-compiler.
 
+If the `.exe` is unreliable on a user's machine, prefer the source local install package. It avoids PyInstaller and starts the same local app with Python and `uv`:
+
+```text
+Start-Windows.bat
+```
+
 ## Runtime Behavior
 
 The packaged launcher:
