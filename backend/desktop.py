@@ -25,6 +25,7 @@ def main() -> None:
         host="127.0.0.1",
         port=port,
         log_level="warning",
+        log_config=None,
         access_log=False,
     )
 
