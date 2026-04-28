@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ project_name }}</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body class="app-shell">
+    <main
+      class="page stack-xl"
+      data-project-id="{{ project_id }}"
+      data-current-step="{{ step }}"
+      {% if next_step %}data-next-step="{{ next_step.slug }}"{% endif %}
+    >
+      <section class="project-topbar">
+        <div class="project-heading">
+          <a class="back-link" href="/" aria-label="Back to project list"><span aria-hidden="true">←</span> Back to project list</a>
+          <p class="eyebrow">Screening project</p>
+          <h1 id="project-name">{{ project_name }}</h1>
+          <p id="project-description" class="muted"></p>
+        </div>
+        <div class="pill-row">
+          <span id="project-status-pill" class="pill">Not started</span>
+          <span id="project-model-a-pill" class="pill subtle">A: {{ default_model_a }}</span>
+          <span id="project-model-b-pill" class="pill subtle">B: {{ default_model_b }}</span>
+        </div>
+      </section>
+
+      <section class="step-grid">
+        {% for item in steps %}
+        <a href="{{ item.href }}" class="step-card {% if item.active %}active{% endif %}" data-step="{{ item.slug }}">
+          <span>{{ item.index }}</span>
+          <strong>{{ item.label }}</strong>
+          <p>{{ item.description }}</p>
+        </a>
+        {% endfor %}
+      </section>
+
+      {% if step == "project" %}
+      <section class="panel stack-lg">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Step 1</p>
+            <h2>Project settings</h2>
+            <p class="muted">Set the project identity before screening starts.</p>
+          </div>
+        </div>
+        <form id="project-form" class="stack">
+          <div class="grid two">
+            <label class="field">
+              <span>Project name</span>
+              <input id="project-name-input" type="text" name="name" required />
+            </label>
+            <label class="field">
+              <span>Description</span>
+              <input id="project-description-input" type="text" name="description" placeholder="Optional description" />
+            </label>
+          </div>
+          <div class="grid two">
+            <label class="field">
+              <span>Model A</span>
+              <select id="project-model-a-input" name="model_a">
+                {% for model_name in available_models %}
+                <option value="{{ model_name }}">{{ model_name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field">
+              <span>Model B</span>
+              <select id="project-model-b-input" name="model_b">
+                {% for model_name in available_models %}
+                <option value="{{ model_name }}">{{ model_name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+          <p class="muted">Each paper is screened by both models in parallel. Models must be different.</p>
+          <section id="api-settings-card" class="api-settings-card stack" data-api-providers></section>
+          <p id="project-form-status" class="muted"></p>
+          <div class="actions">
+            <button type="submit">Save project</button>
+            {% if next_step %}
+            <button id="save-project-next-button" type="button" class="secondary">Save & Continue</button>
+            {% endif %}
+          </div>
+        </form>
+      </section>
+      {% endif %}
+
+      {% if step == "criteria" %}
+      <section class="panel stack-lg">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Step 2</p>
+            <h2>Eligibility criteria</h2>
+            <p class="muted">Enter each criterion exactly as you want it injected into the screening instruction.</p>
+          </div>
+        </div>
+        <div class="criteria-layout">
+          <div class="criteria-column stack">
+            <div class="list-header">
+              <h3>Inclusion criteria</h3>
+            </div>
+            <div id="inclusion-list" class="criterion-list"></div>
+            <button id="add-inclusion-button" type="button" class="secondary small-button add-criterion-button">+ Add inclusion criterion</button>
+          </div>
+          <div class="criteria-column stack">
+            <div class="list-header">
+              <h3>Exclusion criteria</h3>
+            </div>
+            <div id="exclusion-list" class="criterion-list"></div>
+            <button id="add-exclusion-button" type="button" class="secondary small-button add-criterion-button">+ Add exclusion criterion</button>
+          </div>
+        </div>
+        <p id="criteria-status" class="muted"></p>
+        <div class="actions split-actions">
+          {% if previous_step %}
+          <a class="button-link secondary-link" href="/projects/{{ project_id }}/{{ previous_step.slug }}">Back</a>
+          {% endif %}
+          <div class="actions">
+            <button id="save-criteria-button" type="button">Save criteria</button>
+            {% if next_step %}
+            <button id="save-criteria-next-button" type="button" class="secondary">Save & Continue</button>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if step == "import" %}
+      <section class="panel stack">
+        <div class="section-header compact">
+          <div>
+            <p class="eyebrow">Step 3</p>
+            <h2>RIS import and deduplication</h2>
+            <p class="muted">Upload one or more RIS files. The backend merges and deduplicates them.</p>
+          </div>
+          <div class="section-actions">
+            <a id="import-export-deduped-ris-link" class="outline-action-button" href="#" aria-disabled="true">Export deduplicated RIS</a>
+          </div>
+        </div>
+
+        <div class="import-workflow">
+          <section id="import-dropzone" class="import-dropzone" tabindex="0" aria-label="RIS upload area">
+            <input id="ris-files" type="file" accept=".ris" multiple hidden />
+            <div class="dropzone-content">
+              <strong>Drop RIS files here or click to browse</strong>
+              <span class="muted">Multiple <code>.ris</code> files supported — automatic deduplication.</span>
+            </div>
+          </section>
+
+          <div id="selected-files" class="selected-files hidden"></div>
+          <div id="import-action-row" class="import-action-row hidden">
+            <p id="import-status" class="muted"></p>
+            <button id="import-button" type="button">Import RIS files</button>
+          </div>
+        </div>
+
+        <div id="current-import-card" class="current-import-card hidden">
+          <div class="stats compact-stats">
+            <article class="stat-card"><span>Files</span><strong id="summary-files">0</strong></article>
+            <article class="stat-card"><span>Imported</span><strong id="summary-imported">0</strong></article>
+            <article class="stat-card"><span>Unique</span><strong id="summary-unique">0</strong></article>
+            <article class="stat-card"><span>Duplicates</span><strong id="summary-duplicates">0</strong></article>
+          </div>
+          <div id="imported-files-panel" class="imported-files-panel hidden">
+            <div class="imported-files-header">
+              <strong>Currently imported RIS files</strong>
+              <span class="muted">New uploads are appended and deduplicated. Re-uploading a file with the same name replaces its previous version.</span>
+            </div>
+            <ul id="imported-files-list" class="imported-files-list"></ul>
+          </div>
+        </div>
+
+        <div class="actions split-actions">
+          {% if previous_step %}
+          <a class="button-link secondary-link" href="/projects/{{ project_id }}/{{ previous_step.slug }}">Back</a>
+          {% endif %}
+          <div class="run-toolbar-actions">
+            {% if next_step %}
+            <a id="import-next-link" class="button-link secondary-link" href="/projects/{{ project_id }}/{{ next_step.slug }}">Next</a>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if step == "run" %}
+      <section class="panel stack-lg">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Step 4</p>
+            <h2>Launch screening</h2>
+            <p id="run-model-copy" class="muted">Two models screen each paper in parallel. Track per-model progress below.</p>
+          </div>
+        </div>
+
+        <div class="actions split-actions run-toolbar">
+          {% if previous_step %}
+          <a class="button-link secondary-link" href="/projects/{{ project_id }}/{{ previous_step.slug }}">Back</a>
+          {% endif %}
+          <div class="run-toolbar-actions">
+            <button id="create-review-project-button" type="button" class="outline-action-button" disabled>
+              Import into review project
+            </button>
+            <div id="export-actions" class="export-actions hidden">
+              <button id="export-toggle-button" type="button" class="outline-action-button export-toggle-button" aria-haspopup="true" aria-expanded="false" disabled>
+                <span>Export</span>
+                <span class="export-toggle-caret" aria-hidden="true">▾</span>
+              </button>
+              <div id="export-menu" class="export-menu hidden" role="menu">
+                <a id="export-a-link" class="export-menu-link" href="#" role="menuitem" aria-disabled="true">Model A results (.xlsx)</a>
+                <a id="export-b-link" class="export-menu-link" href="#" role="menuitem" aria-disabled="true">Model B results (.xlsx)</a>
+                <a id="export-combined-link" class="export-menu-link" href="#" role="menuitem" aria-disabled="true">Combined results (.xlsx)</a>
+                <a id="errors-ris-a-link" class="export-menu-link" href="#" role="menuitem" aria-disabled="true">Model A errors (.ris)</a>
+                <a id="errors-ris-b-link" class="export-menu-link" href="#" role="menuitem" aria-disabled="true">Model B errors (.ris)</a>
+              </div>
+            </div>
+            <button id="resume-a-button" type="button" class="outline-action-button hidden">Resume Model A</button>
+            <button id="resume-b-button" type="button" class="outline-action-button hidden">Resume Model B</button>
+            <button id="run-button" type="button" class="run-primary-button">Run screening</button>
+          </div>
+        </div>
+
+        <div class="dual-progress-grid">
+          <article class="dual-progress-card">
+            <div class="dual-progress-header">
+              <strong id="progress-label-a">Model A</strong>
+              <span id="progress-status-a" class="pill subtle">prepared</span>
+            </div>
+            <div class="progress-shell">
+              <div class="progress-track"><div id="progress-bar-a" class="progress-bar"></div></div>
+              <span id="progress-text-a">0%</span>
+            </div>
+            <div class="stats compact-stats">
+              <article class="stat-card"><span>Total</span><strong id="stat-total-a">0</strong></article>
+              <article class="stat-card"><span>Done</span><strong id="stat-completed-a">0</strong></article>
+              <article class="stat-card"><span>Yes</span><strong id="stat-yes-a">0</strong></article>
+              <article class="stat-card"><span>No</span><strong id="stat-no-a">0</strong></article>
+              <article class="stat-card"><span>Maybe</span><strong id="stat-maybe-a">0</strong></article>
+              <article class="stat-card"><span>Errors</span><strong id="stat-errors-a">0</strong></article>
+            </div>
+            <p id="last-error-a" class="muted"></p>
+          </article>
+          <article class="dual-progress-card">
+            <div class="dual-progress-header">
+              <strong id="progress-label-b">Model B</strong>
+              <span id="progress-status-b" class="pill subtle">prepared</span>
+            </div>
+            <div class="progress-shell">
+              <div class="progress-track"><div id="progress-bar-b" class="progress-bar"></div></div>
+              <span id="progress-text-b">0%</span>
+            </div>
+            <div class="stats compact-stats">
+              <article class="stat-card"><span>Total</span><strong id="stat-total-b">0</strong></article>
+              <article class="stat-card"><span>Done</span><strong id="stat-completed-b">0</strong></article>
+              <article class="stat-card"><span>Yes</span><strong id="stat-yes-b">0</strong></article>
+              <article class="stat-card"><span>No</span><strong id="stat-no-b">0</strong></article>
+              <article class="stat-card"><span>Maybe</span><strong id="stat-maybe-b">0</strong></article>
+              <article class="stat-card"><span>Errors</span><strong id="stat-errors-b">0</strong></article>
+            </div>
+            <p id="last-error-b" class="muted"></p>
+          </article>
+        </div>
+        <p id="run-meta" class="muted">No run started yet.</p>
+
+        <section class="results-preview stack">
+          <div class="section-header">
+            <div>
+              <h3>Live results</h3>
+              <p class="muted">Each completed title/abstract decision appears here as soon as it is written.</p>
+            </div>
+            <span id="results-count-pill" class="pill subtle">0 results</span>
+          </div>
+          <div id="results-empty" class="empty-card compact-empty">
+            <h3>No completed records yet</h3>
+            <p>Run screening to start filling the live results table.</p>
+          </div>
+          <div id="results-table-shell" class="results-table-shell hidden">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>DOI</th>
+                  <th>Year</th>
+                  <th>Journal</th>
+                  <th>Model A</th>
+                  <th>Model B</th>
+                  <th>Consensus</th>
+                </tr>
+              </thead>
+              <tbody id="results-table-body"></tbody>
+            </table>
+          </div>
+          <div id="results-pagination" class="results-pagination hidden">
+            <button id="results-prev-button" type="button" class="secondary">Previous</button>
+            <span id="results-page-meta" class="muted">Page 1 of 1</span>
+            <button id="results-next-button" type="button" class="secondary">Next</button>
+          </div>
+        </section>
+      </section>
+      {% endif %}
+
+      {% if step == "review" %}
+      <section class="panel stack-lg">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Step 5</p>
+            <h2>Review workspace</h2>
+            <p class="muted">Review records that need a human decision and confirm what will enter the full-text RIS.</p>
+          </div>
+          <div class="section-actions">
+            <a id="review-export-a-link" class="outline-action-button" href="#" aria-disabled="true">Export Model A (.xlsx)</a>
+            <a id="review-export-b-link" class="outline-action-button" href="#" aria-disabled="true">Export Model B (.xlsx)</a>
+            <a id="review-export-combined-link" class="outline-action-button" href="#" aria-disabled="true">Export combined (.xlsx)</a>
+          </div>
+        </div>
+
+        <div class="stats compact-stats">
+          <article class="stat-card"><span>Total</span><strong id="review-stat-total">0</strong></article>
+          <article class="stat-card"><span>Included in RIS</span><strong id="review-stat-consensus-agree">0</strong></article>
+          <article class="stat-card"><span>Needs review</span><strong id="review-stat-consensus-partial">0</strong></article>
+          <article class="stat-card"><span>Excluded</span><strong id="review-stat-consensus-conflict">0</strong></article>
+          <article class="stat-card"><span>Reviewed</span><strong id="review-stat-reviewed">0</strong></article>
+          <article class="stat-card"><span>Human include</span><strong id="review-stat-human-yes">0</strong></article>
+          <article class="stat-card"><span>Human exclude</span><strong id="review-stat-human-no">0</strong></article>
+          <article class="stat-card"><span>Human maybe</span><strong id="review-stat-human-maybe">0</strong></article>
+        </div>
+
+        <div class="review-toolbar review-toolbar-quad">
+          <label class="field">
+            <span>Final status</span>
+            <select id="review-filter-consensus">
+              <option value="all">All final statuses</option>
+              <option value="needs_review" selected>Needs review</option>
+              <option value="included">Included in RIS</option>
+              <option value="excluded">Excluded</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>A decision</span>
+            <select id="review-filter-a">
+              <option value="all">All A decisions</option>
+              <option value="yes">A include</option>
+              <option value="no">A exclude</option>
+              <option value="maybe">A maybe</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>B decision</span>
+            <select id="review-filter-b">
+              <option value="all">All B decisions</option>
+              <option value="yes">B include</option>
+              <option value="no">B exclude</option>
+              <option value="maybe">B maybe</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Human decision</span>
+            <select id="review-filter-human">
+              <option value="all">All human decisions</option>
+              <option value="unreviewed">Unreviewed</option>
+              <option value="yes">Human include</option>
+              <option value="no">Human exclude</option>
+              <option value="maybe">Human maybe</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="review-empty" class="empty-card compact-empty">
+          <h3>No screening results yet</h3>
+          <p>Finish a run first. This workspace reads the latest project run directly from local files.</p>
+        </div>
+
+        <section id="review-shell" class="review-shell hidden">
+          <aside class="review-sidebar">
+            <div class="review-sidebar-header">
+              <h3>Papers</h3>
+              <span id="review-visible-count" class="pill subtle">0 shown</span>
+            </div>
+            <div class="review-sidebar-search">
+              <input id="review-search" type="text" placeholder="Search papers" />
+            </div>
+            <div id="review-list" class="review-list"></div>
+          </aside>
+
+          <section class="review-detail">
+            <div id="review-detail-empty" class="empty-card compact-empty">
+              <h3>Select a paper</h3>
+              <p>Choose a paper from the left to inspect the AI decision and record the human judgment.</p>
+            </div>
+
+            <div id="review-detail-content" class="stack hidden">
+              <div class="review-detail-top">
+                <div>
+                  <p id="review-sequence" class="eyebrow"></p>
+                  <h3 id="review-title"></h3>
+                </div>
+                <div class="pill-row">
+                  <span id="review-model-a-pill" class="pill subtle">A: pending</span>
+                  <span id="review-model-b-pill" class="pill subtle">B: pending</span>
+                  <span id="review-human-pill" class="pill subtle">Unreviewed</span>
+                  <span id="review-consensus-pill" class="pill final-status-needs_review">Needs review</span>
+                </div>
+              </div>
+
+              <div id="review-meta" class="review-meta"></div>
+
+              <article class="detail-card">
+                <h4>Abstract</h4>
+                <p id="review-abstract" class="detail-copy"></p>
+              </article>
+
+              <div class="grid two">
+                <article class="detail-card">
+                  <h4>Model A reasoning</h4>
+                  <p id="review-reason-a" class="detail-copy"></p>
+                </article>
+                <article class="detail-card">
+                  <h4>Model B reasoning</h4>
+                  <p id="review-reason-b" class="detail-copy"></p>
+                </article>
+              </div>
+
+              <div class="criteria-toggle-row">
+                <button
+                  id="review-inclusion-toggle"
+                  type="button"
+                  class="criteria-toggle-button"
+                  aria-expanded="false"
+                  aria-controls="review-inclusion-section"
+                >
+                  <span id="review-inclusion-toggle-label">▸ Show inclusion details</span>
+                </button>
+                <button
+                  id="review-exclusion-toggle"
+                  type="button"
+                  class="criteria-toggle-button"
+                  aria-expanded="false"
+                  aria-controls="review-exclusion-section"
+                >
+                  <span id="review-exclusion-toggle-label">▸ Show exclusion details</span>
+                </button>
+                <p class="muted criteria-toggle-hint">Optional. Audit each model's per-criterion judgment.</p>
+              </div>
+              <div id="review-inclusion-section" class="review-criteria-grid hidden">
+                <article class="detail-card">
+                  <h4>Model A · Inclusion</h4>
+                  <div id="review-inclusion-a" class="criteria-result-list"></div>
+                </article>
+                <article class="detail-card">
+                  <h4>Model B · Inclusion</h4>
+                  <div id="review-inclusion-b" class="criteria-result-list"></div>
+                </article>
+              </div>
+              <div id="review-exclusion-section" class="review-criteria-grid hidden">
+                <article class="detail-card">
+                  <h4>Model A · Exclusion</h4>
+                  <div id="review-exclusion-a" class="criteria-result-list"></div>
+                </article>
+                <article class="detail-card">
+                  <h4>Model B · Exclusion</h4>
+                  <div id="review-exclusion-b" class="criteria-result-list"></div>
+                </article>
+              </div>
+
+              <article class="detail-card stack">
+                <div class="section-header">
+                  <div>
+                    <h4>Human decision</h4>
+                    <p class="muted">Use this to confirm or override the AI judgment.</p>
+                  </div>
+                </div>
+                <div class="review-judgment-buttons">
+                  <button id="review-human-yes" type="button" class="secondary judgment-button judgment-button-yes">Include</button>
+                  <button id="review-human-maybe" type="button" class="secondary judgment-button judgment-button-maybe">Maybe</button>
+                  <button id="review-human-no" type="button" class="secondary judgment-button judgment-button-no">Exclude</button>
+                </div>
+                <label class="field">
+                  <span>Human reason</span>
+                  <textarea id="review-human-reason" rows="5" placeholder="Optional reviewer note or reason"></textarea>
+                </label>
+                <div class="actions">
+                  <button id="review-save-button" type="button">Save review</button>
+                  <span id="review-save-status" class="muted"></span>
+                </div>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <div class="actions split-actions">
+          {% if previous_step %}
+          <a class="button-link secondary-link" href="/projects/{{ project_id }}/{{ previous_step.slug }}">Back</a>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+    </main>
+    <script src="/static/project.js?v={{ asset_version }}"></script>
+  </body>
+</html>

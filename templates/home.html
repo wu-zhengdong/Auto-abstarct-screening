@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LLM Abstract Screening</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body class="app-shell">
+    <main class="page stack-xl">
+      <section class="hero-banner compact-hero">
+        <div class="hero-content compact-hero-content">
+          <p class="eyebrow">Project workspace</p>
+          <h1>Auto abstract screening</h1>
+          <p class="hero-text muted">
+            Create a project, set eligibility criteria, import RIS files, run screening, and export structured
+            results for review workflows.
+          </p>
+        </div>
+      </section>
+
+      <section class="home-section stack" data-home-section="screening">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Screening</p>
+            <h2>Screening projects</h2>
+          </div>
+          <div class="section-actions">
+            <label class="field inline-field home-filter-field">
+              <span>Status</span>
+              <select id="screening-project-status-filter">
+                <option value="all">All</option>
+                <option value="not_started">Not started</option>
+                <option value="ready_to_run">Ready to run</option>
+                <option value="running">Running</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+            </label>
+            <label class="field inline-field home-filter-field">
+              <span>Sort</span>
+              <select id="screening-project-sort">
+                <option value="updated_desc">Recently updated</option>
+                <option value="created_desc">Recently created</option>
+                <option value="name_asc">Name A→Z</option>
+                <option value="papers_desc">Papers (most)</option>
+              </select>
+            </label>
+            <button id="toggle-screening-projects-button" type="button" class="outline-action-button" aria-expanded="true">
+              Collapse
+            </button>
+            <button id="open-create-project-button" type="button" class="outline-action-button">Create project</button>
+          </div>
+        </div>
+        <div id="screening-projects-body" class="stack">
+          <div id="projects-grid" class="project-grid home-project-grid"></div>
+          <div id="screening-projects-pagination" class="home-pagination hidden"></div>
+        </div>
+      </section>
+
+      <section class="home-section stack" data-home-section="review">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Review</p>
+            <h2>Review projects</h2>
+          </div>
+          <div class="section-actions">
+            <label class="field inline-field home-filter-field">
+              <span>Status</span>
+              <select id="review-project-status-filter">
+                <option value="all">All</option>
+                <option value="not_started">Not started</option>
+                <option value="ready_to_review">Ready to review</option>
+                <option value="in_review">In review</option>
+                <option value="reviewed">Reviewed</option>
+              </select>
+            </label>
+            <label class="field inline-field home-filter-field">
+              <span>Sort</span>
+              <select id="review-project-sort">
+                <option value="updated_desc">Recently updated</option>
+                <option value="created_desc">Recently created</option>
+                <option value="name_asc">Name A→Z</option>
+                <option value="progress_asc">Progress (least done)</option>
+                <option value="progress_desc">Progress (most done)</option>
+              </select>
+            </label>
+            <button id="toggle-review-projects-button" type="button" class="outline-action-button" aria-expanded="true">
+              Collapse
+            </button>
+          </div>
+        </div>
+        <div id="review-projects-body" class="stack">
+          <div id="review-projects-grid" class="project-grid home-project-grid"></div>
+          <div id="review-projects-pagination" class="home-pagination hidden"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="create-project-modal" class="modal-shell hidden" aria-hidden="true">
+      <div id="create-project-backdrop" class="modal-backdrop"></div>
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="create-project-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">New project</p>
+            <h2 id="create-project-title">Create a screening project</h2>
+            <p class="muted">Set the project identity here. Criteria and RIS import happen inside the project flow.</p>
+          </div>
+        </div>
+        <form id="create-project-form" class="stack">
+          <label class="field">
+            <span>Project name</span>
+            <input type="text" name="name" placeholder="New project name" required />
+          </label>
+          <label class="field">
+            <span>Description</span>
+            <input type="text" name="description" placeholder="Optional description" />
+          </label>
+          <div class="grid two">
+            <label class="field">
+              <span>Model A</span>
+              <select name="model_a" aria-label="Model A">
+                {% for model_name in available_models %}
+                <option value="{{ model_name }}" {% if model_name == default_model_a %}selected{% endif %}>{{ model_name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="field">
+              <span>Model B</span>
+              <select name="model_b" aria-label="Model B">
+                {% for model_name in available_models %}
+                <option value="{{ model_name }}" {% if model_name == default_model_b %}selected{% endif %}>{{ model_name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+          <p class="muted">Both models will run in parallel and a consensus is computed per paper. Models must be different.</p>
+          <div class="actions modal-actions">
+            <button id="close-create-project-button" type="button" class="secondary">Cancel</button>
+            <button type="submit">Create project</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div id="delete-project-modal" class="modal-shell hidden" aria-hidden="true">
+      <div id="delete-project-backdrop" class="modal-backdrop"></div>
+      <section class="modal-card modal-card-sm" role="dialog" aria-modal="true" aria-labelledby="delete-project-title">
+        <div class="stack">
+          <div>
+            <p class="eyebrow">Delete project</p>
+            <h2 id="delete-project-title">Remove this project?</h2>
+            <p class="muted">
+              This deletes the project settings, criteria, imported studies, runs, and local export files for this
+              project.
+            </p>
+          </div>
+          <div class="actions modal-actions">
+            <button id="cancel-delete-project-button" type="button" class="secondary">Cancel</button>
+            <button id="confirm-delete-project-button" type="button" class="danger-solid-button">Delete project</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="copy-project-modal" class="modal-shell hidden" aria-hidden="true">
+      <div id="copy-project-backdrop" class="modal-backdrop"></div>
+      <section class="modal-card modal-card-sm" role="dialog" aria-modal="true" aria-labelledby="copy-project-title">
+        <div class="stack">
+          <div>
+            <p class="eyebrow">Copy project</p>
+            <h2 id="copy-project-title">Create a project copy?</h2>
+            <p class="muted">
+              This copies the project name, description, models (A & B), and criteria only. RIS imports and previous
+              runs are not copied.
+            </p>
+          </div>
+          <div class="actions modal-actions">
+            <button id="cancel-copy-project-button" type="button" class="secondary">Cancel</button>
+            <button id="confirm-copy-project-button" type="button">Create copy</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.defaultModelA = "{{ default_model_a }}";
+      window.defaultModelB = "{{ default_model_b }}";
+      window.availableModels = {{ available_models|tojson }};
+    </script>
+    <script src="/static/home.js?v={{ asset_version }}"></script>
+  </body>
+</html>

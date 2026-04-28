@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Review Workspace</title>
+    <link rel="stylesheet" href="/static/styles.css?v={{ asset_version }}" />
+  </head>
+  <body class="app-shell">
+    <main class="page stack-xl" data-review-project-id="{{ review_project_id }}">
+      <section class="project-topbar">
+        <div class="review-project-header">
+          <a class="back-link" href="/" aria-label="Back to project list"><span aria-hidden="true">←</span> Back to project list</a>
+          <form id="review-project-name-form" class="review-project-name-form">
+            <label for="review-project-name-input" class="eyebrow">Review project</label>
+            <input
+              id="review-project-name-input"
+              class="review-project-name-input"
+              type="text"
+              name="name"
+              placeholder="Review project"
+              autocomplete="off"
+            />
+          </form>
+          <p id="review-project-source" class="muted">Inspect AI judgments and record the final human decision.</p>
+          <p id="review-project-name-status" class="muted review-project-name-status"></p>
+        </div>
+        <div class="section-actions">
+          <div id="review-export-actions" class="export-actions">
+            <button id="review-export-toggle-button" type="button" class="outline-action-button export-toggle-button" aria-expanded="false">
+              Export
+            </button>
+            <div id="review-export-menu" class="export-menu hidden">
+              <a id="review-export-csv-link" class="export-menu-link" href="#">CSV (.csv)</a>
+              <a id="review-export-xlsx-link" class="export-menu-link" href="#">Excel (.xlsx)</a>
+              <a id="review-export-included-ris-link" class="export-menu-link" href="#">Included in RIS (.ris)</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel stack-lg">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Review</p>
+            <h2>Human review workspace</h2>
+            <p class="muted">Review records that need a human decision and confirm what will enter the full-text RIS.</p>
+          </div>
+        </div>
+
+        <div class="review-toolbar review-toolbar-quad">
+          <label class="field">
+            <span>Final status</span>
+            <select id="review-filter-consensus">
+              <option value="all">All final statuses (0)</option>
+              <option value="needs_review" selected>Needs review (0)</option>
+              <option value="included">Included in RIS (0)</option>
+              <option value="excluded">Excluded (0)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>A decision</span>
+            <select id="review-filter-a">
+              <option value="all">All A decisions (0)</option>
+              <option value="yes">A include (0)</option>
+              <option value="no">A exclude (0)</option>
+              <option value="maybe">A maybe (0)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>B decision</span>
+            <select id="review-filter-b">
+              <option value="all">All B decisions (0)</option>
+              <option value="yes">B include (0)</option>
+              <option value="no">B exclude (0)</option>
+              <option value="maybe">B maybe (0)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Human decision</span>
+            <select id="review-filter-human">
+              <option value="all">All human decisions (0)</option>
+              <option value="unreviewed">Unreviewed (0)</option>
+              <option value="yes">Human include (0)</option>
+              <option value="no">Human exclude (0)</option>
+              <option value="maybe">Human maybe (0)</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="review-empty" class="empty-card compact-empty">
+          <h3>No papers in this review project</h3>
+          <p>This review project does not contain any reviewable records yet.</p>
+        </div>
+
+        <section id="review-shell" class="review-shell hidden">
+          <aside class="review-sidebar">
+            <div class="review-sidebar-header">
+              <h3>Papers</h3>
+              <span id="review-visible-count" class="pill subtle">0 shown</span>
+            </div>
+            <div class="review-sidebar-search">
+              <input id="review-search" type="text" placeholder="Search papers" />
+            </div>
+            <div id="review-list" class="review-list"></div>
+          </aside>
+
+          <section class="review-detail">
+            <div id="review-detail-empty" class="empty-card compact-empty">
+              <h3>Select a paper</h3>
+              <p>Choose a paper from the left to inspect the AI decision and record the human judgment.</p>
+            </div>
+
+            <div id="review-detail-content" class="stack hidden">
+              <div class="review-detail-top">
+                <div>
+                  <p id="review-sequence" class="eyebrow"></p>
+                  <h3 id="review-title"></h3>
+                </div>
+                <div class="pill-row">
+                  <span id="review-model-a-pill" class="pill subtle">A: pending</span>
+                  <span id="review-model-b-pill" class="pill subtle">B: pending</span>
+                  <span id="review-human-pill" class="pill subtle">Unreviewed</span>
+                  <span id="review-consensus-pill" class="pill final-status-needs_review">Needs review</span>
+                </div>
+              </div>
+
+              <div id="review-meta" class="review-meta"></div>
+
+              <article class="detail-card">
+                <h4>Abstract</h4>
+                <p id="review-abstract" class="detail-copy"></p>
+              </article>
+
+              <div class="grid two">
+                <article class="detail-card">
+                  <h4>Model A reasoning</h4>
+                  <p id="review-reason-a" class="detail-copy"></p>
+                </article>
+                <article class="detail-card">
+                  <h4>Model B reasoning</h4>
+                  <p id="review-reason-b" class="detail-copy"></p>
+                </article>
+              </div>
+
+              <div class="criteria-toggle-row">
+                <button
+                  id="review-inclusion-toggle"
+                  type="button"
+                  class="criteria-toggle-button"
+                  aria-expanded="false"
+                  aria-controls="review-inclusion-section"
+                >
+                  <span id="review-inclusion-toggle-label">▸ Show inclusion details</span>
+                </button>
+                <button
+                  id="review-exclusion-toggle"
+                  type="button"
+                  class="criteria-toggle-button"
+                  aria-expanded="false"
+                  aria-controls="review-exclusion-section"
+                >
+                  <span id="review-exclusion-toggle-label">▸ Show exclusion details</span>
+                </button>
+                <p class="muted criteria-toggle-hint">Optional. Audit each model's per-criterion judgment.</p>
+              </div>
+              <div id="review-inclusion-section" class="review-criteria-grid hidden">
+                <article class="detail-card">
+                  <h4>Model A · Inclusion</h4>
+                  <div id="review-inclusion-a" class="criteria-result-list"></div>
+                </article>
+                <article class="detail-card">
+                  <h4>Model B · Inclusion</h4>
+                  <div id="review-inclusion-b" class="criteria-result-list"></div>
+                </article>
+              </div>
+              <div id="review-exclusion-section" class="review-criteria-grid hidden">
+                <article class="detail-card">
+                  <h4>Model A · Exclusion</h4>
+                  <div id="review-exclusion-a" class="criteria-result-list"></div>
+                </article>
+                <article class="detail-card">
+                  <h4>Model B · Exclusion</h4>
+                  <div id="review-exclusion-b" class="criteria-result-list"></div>
+                </article>
+              </div>
+
+              <article class="detail-card stack">
+                <div class="section-header">
+                  <div>
+                    <h4>Human decision</h4>
+                    <p class="muted">Use this to confirm or override the AI judgment.</p>
+                  </div>
+                </div>
+                <div class="review-judgment-buttons">
+                  <button id="review-human-yes" type="button" class="secondary judgment-button judgment-button-yes">Include</button>
+                  <button id="review-human-maybe" type="button" class="secondary judgment-button judgment-button-maybe">Maybe</button>
+                  <button id="review-human-no" type="button" class="secondary judgment-button judgment-button-no">Exclude</button>
+                </div>
+                <label class="field">
+                  <span>Human reason</span>
+                  <textarea id="review-human-reason" rows="5" placeholder="Optional reviewer note or reason"></textarea>
+                </label>
+                <div class="actions">
+                  <button id="review-save-button" type="button">Save review</button>
+                  <span id="review-save-status" class="muted"></span>
+                </div>
+              </article>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script src="/static/review.js?v={{ asset_version }}"></script>
+  </body>
+</html>

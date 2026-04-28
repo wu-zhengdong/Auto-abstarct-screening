@@ -1,0 +1,68 @@
+name: Build desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    name: Windows exe
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: python -m pip install uv
+
+      - name: Build exe
+        shell: pwsh
+        run: .\build_windows_exe.ps1
+
+      - name: Package exe
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          Compress-Archive -Path "dist\LLM_Abstract_Screening.exe" -DestinationPath "artifacts\LLM_Abstract_Screening_Windows_x64.zip" -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LLM_Abstract_Screening_Windows_x64
+          path: artifacts/LLM_Abstract_Screening_Windows_x64.zip
+
+  build-macos:
+    name: macOS app
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: python -m pip install uv
+
+      - name: Build app
+        run: ./build_mac_app.sh
+
+      - name: Package app
+        run: |
+          mkdir -p artifacts
+          ditto -c -k --sequesterRsrc --keepParent "dist/LLM Abstract Screening.app" "artifacts/LLM_Abstract_Screening_macOS_arm64.zip"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LLM_Abstract_Screening_macOS_arm64
+          path: artifacts/LLM_Abstract_Screening_macOS_arm64.zip
