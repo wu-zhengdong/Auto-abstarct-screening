@@ -18,6 +18,9 @@ def test_build_system_instruction_contains_criteria_and_schema() -> None:
 
     assert "I1: Adults aged 18 years or older" in prompt
     assert "E1: Review, editorial, commentary, or letter" in prompt
+    assert "high-sensitivity" in prompt
+    assert "Minimize false negatives" in prompt
+    assert "teenage" in prompt
     assert '"criteria_results"' in prompt
     assert '"yes | no | maybe"' in prompt
 
